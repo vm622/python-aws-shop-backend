@@ -1,5 +1,5 @@
 import json
-from products import products_list
+from lambda_functions.products import products_list
 
 def handler(event, context):
     product_id = event["pathParameters"]["id"]
