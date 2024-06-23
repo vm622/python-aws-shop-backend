@@ -1,1 +1,1 @@
-# nodejs-aws-shop-backend
+# python-aws-shop-backend
