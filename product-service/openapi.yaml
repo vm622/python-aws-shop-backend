@@ -1,0 +1,79 @@
+openapi: 3.0.3
+info:
+  title: Products Service API
+  version: 1.0.11
+servers:
+  - url: https://bf175dhrn4.execute-api.us-east-1.amazonaws.com/prod
+tags:
+  - name: products
+paths:
+  /products:
+    get:
+      tags:
+        - products
+      summary: Get list of products
+      responses:
+        "200":
+          description: A JSON array of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+        "404":
+          description: No products found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "No products found"
+  /products/{id}:
+    get:
+      tags:
+        - products
+      summary: Find product by ID
+      description: Returns a single product
+      parameters:
+        - name: id
+          in: path
+          description: ID of the product
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A product
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product not found"
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1"
+        name:
+          type: string
+          example: "Product 1 description"
+        price:
+          type: number
+          format: float
+          example: 256.34
