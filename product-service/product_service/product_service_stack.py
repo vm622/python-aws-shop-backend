@@ -72,13 +72,25 @@ class ProductServiceStack(Stack):
             environment= env
         )
 
+        create_product_function = _lambda.Function(
+            self,
+            "CreateProductHandler",
+            runtime = _lambda.Runtime.PYTHON_3_12,
+            code = _lambda.Code.from_asset("lambda_functions"),
+            handler = "create_product.handler", 
+            environment= env
+        )
+
         products_resource = api.root.add_resource("products")
         products_resource.add_method("GET", apigw.LambdaIntegration(get_products_list_function))
+        products_resource.add_method('POST', apigw.LambdaIntegration(create_product_function))
 
         product_by_id_resource = products_resource.add_resource("{id}")
         product_by_id_resource.add_method("GET", apigw.LambdaIntegration(get_product_by_id_function))
 
         products_table.grant_read_write_data(get_product_by_id_function)
         products_table.grant_read_write_data(get_products_list_function)
+        products_table.grant_read_write_data(create_product_function)
         stocks_table.grant_read_write_data(get_product_by_id_function)
         stocks_table.grant_read_write_data(get_products_list_function)
+        stocks_table.grant_read_write_data(create_product_function)
