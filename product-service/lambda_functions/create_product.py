@@ -12,12 +12,7 @@ def handler(event, context):
     try:
         logger.info(event)
 
-        dynamodb = boto3.resource('dynamodb')
-        products_table_name = os.getenv('PRODUCTS_TABLE_NAME')
-        stocks_table_name = os.getenv('STOCKS_TABLE_NAME')
-
-        products_table = dynamodb.Table(products_table_name)
-        stocks_table = dynamodb.Table(stocks_table_name)
+        dynamodb = boto3.client('dynamodb', region_name=os.getenv('REGION'))
 
         body = json.loads(event['body'])
         title = body['title']
@@ -28,19 +23,33 @@ def handler(event, context):
         product_id = uuid.uuid4()
 
         product_item = {
-            'id': str(product_id),
-            'title': title,
-            'description': description,
-            'price': Decimal(str(price))
+            'id': {'S': str(product_id)},
+            'title': {'S': title},
+            'description': {'S': description},
+            'price': {'N': Decimal(str(price))},
         }
 
         stock_item = {
-            'product_id': str(product_id),
-            'count': count
+            'product_id': {'S': str(product_id)},
+            'count': {'N': str(count)}
         }
 
-        products_table.put_item(Item=product_item)
-        stocks_table.put_item(Item=stock_item)
+        transaction_items = [
+            {
+                'Put': {
+                    'TableName': os.getenv('PRODUCTS_TABLE_NAME'),
+                    'Item': product_item
+                }
+            },
+            {
+                'Put': {
+                    'TableName': os.getenv('STOCKS_TABLE_NAME'),
+                    'Item': stock_item
+                }
+            }
+        ]
+
+        dynamodb.transact_write_items(TransactItems=transaction_items)
 
         logger.info(f"Product {product_id} is sucessfully added")
         return {
