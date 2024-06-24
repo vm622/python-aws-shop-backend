@@ -1,9 +1,14 @@
 import json
 import os 
 import boto3
+import logging
+
+logger = logging.getLogger()
+logger.setLevel("INFO")
 
 def handler(event, context):
     try:
+        logger.info(event)
         dynamodb = boto3.resource('dynamodb', region_name=os.getenv('REGION'))
         products_table = dynamodb.Table(os.getenv('PRODUCTS_TABLE_NAME'))
         stocks_table = dynamodb.Table(os.getenv('STOCKS_TABLE_NAME'))
@@ -15,6 +20,7 @@ def handler(event, context):
         stocks_items = stocks_response.get('Items', [])
 
         if not products_items:
+            logger.exception("No products found")
             return {
                 "statusCode": 404,
                 "headers": {
@@ -35,6 +41,7 @@ def handler(event, context):
                 products_dict[product_id]['price'] = int(products_dict[product_id]['price'])
 
         products = list(products_dict.values())
+        logger.info("Products successfully retrieved")
         return {
         "statusCode": 200,
             "headers": {
@@ -47,6 +54,7 @@ def handler(event, context):
         }
 
     except Exception as e:
+        logger.exception(e)
         return {
             "statusCode": 500,
             "headers": {
