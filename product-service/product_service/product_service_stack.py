@@ -83,13 +83,23 @@ class ProductServiceStack(Stack):
             environment= lambdas_env
         )
 
+        create_product_layer_name = "create_product_layer"
+        create_product_layer = _lambda.LayerVersion(
+            self, 
+            "CreateProductHandlerLayer", 
+            code=_lambda.Code.from_asset(f"lambda_functions/layers/{create_product_layer_name}.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="A layer for CreateProductHandler with jsonschema"
+        )
+
         create_product_function = _lambda.Function(
             self,
             "CreateProductHandler",
             runtime = _lambda.Runtime.PYTHON_3_12,
             code = _lambda.Code.from_asset("lambda_functions"),
             handler = "create_product.handler", 
-            environment= lambdas_env
+            environment= lambdas_env,
+            layers=[create_product_layer]
         )
 
         products_resource = api.root.add_resource("products")
