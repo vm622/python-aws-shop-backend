@@ -38,7 +38,7 @@ def handler(event, context):
             product_id = item['product_id']
             if product_id in products_dict:
                 products_dict[product_id]['count'] = int(item['count'])
-                products_dict[product_id]['price'] = int(products_dict[product_id]['price'])
+                products_dict[product_id]['price'] = float(products_dict[product_id]['price'])
 
         products = list(products_dict.values())
         logger.info("Products successfully retrieved")

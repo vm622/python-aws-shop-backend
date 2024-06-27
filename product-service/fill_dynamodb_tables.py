@@ -2,7 +2,6 @@ import boto3
 import logging
 import random
 import json
-from decimal import Decimal
 import uuid
 
 logger = logging.getLogger()
@@ -21,7 +20,7 @@ def create_product(title, description, price):
             'id': str(product_id),
             'title': title,
             'description': description,
-            'price': Decimal(str(price))
+            'price': (str(price))
         }
     )
 

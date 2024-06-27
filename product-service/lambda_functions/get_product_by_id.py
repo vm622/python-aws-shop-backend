@@ -30,8 +30,8 @@ def handler(event, context):
                 'id': product_item['Item']['id'],
                 'title': product_item['Item']['title'],
                 'description': product_item['Item']['description'],
-                'price': str(product_item['Item']['price']),
-                'count': str(stock_item['Item']['count']),
+                'price': float(product_item['Item']['price']),
+                'count': int(stock_item['Item']['count']),
             }
             logger.info(f"Product {product_id} successfully retrieved")
             return {
