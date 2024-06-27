@@ -5,9 +5,22 @@ from aws_cdk import (
     RemovalPolicy,
     Stack
 )
+import boto3
+from botocore.exceptions import ClientError
 from constructs import Construct
 
 class ProductServiceStack(Stack):
+    @staticmethod
+    def table_exists(table_name):
+        dynamodb = boto3.client('dynamodb')
+        try:
+            dynamodb.describe_table(TableName=table_name)
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                return False
+            else:
+                raise
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -15,16 +28,14 @@ class ProductServiceStack(Stack):
         products_table_name = "products"
         stocks_table_name = "stocks"
 
-        env = {
+        lambdas_env = {
             "PRODUCTS_TABLE_NAME": products_table_name,
             "STOCKS_TABLE_NAME": stocks_table_name
         }  
-        products_table = None
-        stocks_table = None
 
-        try:
-            products_table = dynamodb.Table.from_table_name(self, 'ProductsTable', products_table_name)
-        except:
+        if ProductServiceStack.table_exists(products_table_name):
+            products_table = dynamodb.Table.from_table_name(self, "ProductsTable", products_table_name)
+        else:
             products_table = dynamodb.Table(
                 self,
                 "ProductsTable",
@@ -34,12 +45,12 @@ class ProductServiceStack(Stack):
                     type=dynamodb.AttributeType.STRING
                 ),
                 billing_mode=dynamodb.BillingMode.PROVISIONED,
-                removal_policy=RemovalPolicy.DESTROY
+                removal_policy=RemovalPolicy.DESTROY 
             )
         
-        try:
-            stocks_table = dynamodb.Table.from_table_name(self, 'StocksTable', stocks_table_name)
-        except:
+        if ProductServiceStack.table_exists(stocks_table_name):
+            stocks_table = dynamodb.Table.from_table_name(self, "StocksTable", stocks_table_name)
+        else:
             stocks_table = dynamodb.Table(
                 self,
                 "StocksTable",
@@ -50,8 +61,8 @@ class ProductServiceStack(Stack):
                 ),
                 billing_mode=dynamodb.BillingMode.PROVISIONED,
                 removal_policy=RemovalPolicy.DESTROY
-            )
-        
+            )    
+
         api = apigw.RestApi(self, "ProductServiceApi", rest_api_name="product service")
 
         get_products_list_function = _lambda.Function(
@@ -60,7 +71,7 @@ class ProductServiceStack(Stack):
             runtime = _lambda.Runtime.PYTHON_3_12,
             code = _lambda.Code.from_asset("lambda_functions"),
             handler = "get_products_list.handler", 
-            environment = env
+            environment = lambdas_env
         )
 
         get_product_by_id_function = _lambda.Function(
@@ -69,7 +80,7 @@ class ProductServiceStack(Stack):
             runtime = _lambda.Runtime.PYTHON_3_12,
             code = _lambda.Code.from_asset("lambda_functions"),
             handler = "get_product_by_id.handler", 
-            environment= env
+            environment= lambdas_env
         )
 
         create_product_function = _lambda.Function(
@@ -78,7 +89,7 @@ class ProductServiceStack(Stack):
             runtime = _lambda.Runtime.PYTHON_3_12,
             code = _lambda.Code.from_asset("lambda_functions"),
             handler = "create_product.handler", 
-            environment= env
+            environment= lambdas_env
         )
 
         products_resource = api.root.add_resource("products")
