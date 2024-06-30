@@ -3,7 +3,7 @@ info:
   title: Products Service API
   version: 1.0.11
 servers:
-  - url: https://bf175dhrn4.execute-api.us-east-1.amazonaws.com/prod
+  - url: https://0whhlv5ewj.execute-api.us-east-1.amazonaws.com/prod
 tags:
   - name: products
 paths:
@@ -31,6 +31,64 @@ paths:
                   message:
                     type: string
                     example: "No products found"
+    post:
+      tags:
+        - products
+      summary: Create a product
+      requestBody:
+        description: Optional description in *Markdown*
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Product title"
+                description:
+                  type: string
+                  example: "Product description"
+                count:
+                  type: number
+                  format: int
+                  example: 5
+                price:
+                  type: number
+                  format: float
+                  example: 256.34
+      responses:
+        "200":
+          description: A product is created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product 0baf3369-5b10-4bab-8305-e8ec1d60e3ad is sucessfully added"
+        "400":
+          description: A product creation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "A product creation failed"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error"
+
   /products/{id}:
     get:
       tags:
@@ -70,9 +128,16 @@ components:
         id:
           type: string
           example: "1"
-        name:
+        title:
+          type: string
+          example: "Product 1"
+        description:
           type: string
           example: "Product 1 description"
+        count:
+          type: number
+          format: int
+          example: 5
         price:
           type: number
           format: float
