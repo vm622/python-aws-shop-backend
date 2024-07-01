@@ -21,3 +21,10 @@ def handler(event, context):
 
         for row in csv_file:
             logger.info(row)
+    
+        copy_source = {'Bucket': bucket_name, 'Key': key}
+        parsed_key = key.replace('uploaded/', 'parsed/')
+        s3_client.copy_object(CopySource=copy_source, Bucket=bucket_name, Key=parsed_key)
+
+        if key != 'uploaded/':
+            s3_client.delete_object(Bucket=bucket_name, Key=key)
