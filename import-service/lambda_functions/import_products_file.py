@@ -24,7 +24,7 @@ def handler(event, context):
         s3_object_params = {
             'Bucket': bucket_name,
             'Key': object_key,
-            'ContentType': 'text/csv'
+            'ContentType': 'application/vnd.ms-excel'
         }
 
         presigned_url = s3_client.generate_presigned_url('put_object', Params=s3_object_params, ExpiresIn=600)
