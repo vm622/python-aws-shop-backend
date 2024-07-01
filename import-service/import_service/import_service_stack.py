@@ -32,7 +32,21 @@ class ImportServiceStack(Stack):
         if ImportServiceStack.s3_bucket_exists(bucket_name):
             bucket = s3.Bucket.from_bucket_name(self, 'ProductImportBucket', bucket_name)
         else:
-            bucket = s3.Bucket(self, "RsTask5BucketVm622", bucket_name=bucket_name, removal_policy=RemovalPolicy.DESTROY)
+            bucket = s3.Bucket(
+                self, 
+                "RsTask5BucketVm622", 
+                bucket_name=bucket_name, 
+                removal_policy=RemovalPolicy.DESTROY,
+                cors=[
+                    {
+                        "allowedMethods": [
+                            s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.GET
+                        ],
+                        "allowedOrigins": ["*"],
+                        "allowedHeaders": ["*"],
+                    }
+                ]
+            )
 
         lambdas_env = {
             'IMPORT_BUCKET': bucket_name
