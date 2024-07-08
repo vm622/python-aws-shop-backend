@@ -67,12 +67,18 @@ def handler(event, context):
             TopicArn=os.getenv('CREATE_PRODUCT_SNS'),
             Subject='Products creation notification',
             Message= json.dumps({
-                'default': {
+                'default': json.dumps({
                     'message': "Products successfully created",
                     'products': products,
-                }
+                })
             }),
-            MessageStructure='json'
+            MessageStructure='json',
+            MessageAttributes={
+                    'price': {
+                        'DataType': 'Number',
+                        'StringValue': str(price)
+                    }
+                }
         )
 
     except Exception as e:

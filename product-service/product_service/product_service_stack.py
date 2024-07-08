@@ -33,7 +33,8 @@ class ProductServiceStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         load_dotenv()
-        EMAIL = os.getenv('EMAIL')
+        first_email_addr = os.getenv('FIRST_EMAIL')
+        secondary_email_addr = os.getenv('SECONDARY_EMAIL')
         
         products_table_name = "products"
         stocks_table_name = "stocks"
@@ -47,7 +48,19 @@ class ProductServiceStack(Stack):
         catalog_items_queue = sqs.Queue.from_queue_arn(self, 'CatalogItemsQueue', catalog_items_queue_arn)
 
         create_product_sns_topic = sns.Topic(self, "CreateProductTopic")
-        create_product_sns_topic.add_subscription(sns_subscriptions.EmailSubscription(EMAIL))
+        create_product_sns_topic.add_subscription(sns_subscriptions.EmailSubscription(
+            first_email_addr, 
+            filter_policy={
+                "price": sns.SubscriptionFilter.numeric_filter(less_than_or_equal_to=99.99)
+            }
+        ))
+
+        create_product_sns_topic.add_subscription(sns_subscriptions.EmailSubscription(
+            secondary_email_addr, 
+            filter_policy={
+                "price": sns.SubscriptionFilter.numeric_filter(greater_than_or_equal_to=100)
+            }
+        ))
 
         if ProductServiceStack.table_exists(products_table_name):
             products_table = dynamodb.Table.from_table_name(self, "ProductsTable", products_table_name)
