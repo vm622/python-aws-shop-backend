@@ -5,7 +5,8 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_sqs as sqs,
     RemovalPolicy,
-    aws_s3_notifications as s3_notifications 
+    aws_s3_notifications as s3_notifications,
+    CfnOutput
 )
 from constructs import Construct
 
@@ -92,3 +93,5 @@ class ImportServiceStack(Stack):
         )
 
         queue.grant_send_messages(import_file_parser_function)
+
+        CfnOutput(self, "CatalogItemsQueueArn", value=queue.queue_arn, export_name="CatalogItemsQueueArn")
