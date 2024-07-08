@@ -3,6 +3,7 @@ from aws_cdk import (
     aws_apigateway as apigw,
     aws_s3 as s3, 
     aws_lambda as _lambda,
+    aws_sqs as sqs,
     RemovalPolicy,
     aws_s3_notifications as s3_notifications 
 )
@@ -48,9 +49,7 @@ class ImportServiceStack(Stack):
                 ]
             )
 
-        lambdas_env = {
-            'IMPORT_BUCKET': bucket_name
-        }
+        queue = sqs.Queue(self, "CatalogItemsQueue") 
 
         api = apigw.RestApi(self, "ImportServiceApi", rest_api_name="import service")
 
@@ -60,7 +59,9 @@ class ImportServiceStack(Stack):
             runtime = _lambda.Runtime.PYTHON_3_12,
             code = _lambda.Code.from_asset("lambda_functions"),
             handler = "import_products_file.handler", 
-            environment = lambdas_env
+            environment = {
+                'IMPORT_BUCKET': bucket_name
+            }
         )
 
         import_file_parser_function = _lambda.Function(
@@ -69,7 +70,10 @@ class ImportServiceStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             code=_lambda.Code.from_asset('lambda_functions'),
             handler='import_file_parser.handler',
-            environment=lambdas_env
+            environment={
+                'IMPORT_BUCKET': bucket_name,
+                'CATALOG_ITEMS_SQS': queue.queue_url
+            }
         )
 
         products_resource = api.root.add_resource("import")
@@ -86,3 +90,5 @@ class ImportServiceStack(Stack):
             s3_notifications.LambdaDestination(import_file_parser_function), 
             s3.NotificationKeyFilter(prefix="uploaded/")
         )
+
+        queue.grant_send_messages(import_file_parser_function)
