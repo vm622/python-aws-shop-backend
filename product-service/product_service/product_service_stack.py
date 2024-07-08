@@ -2,12 +2,19 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_apigateway as apigw,
     aws_dynamodb as dynamodb,
+    aws_sqs as sqs, 
+    aws_sns as sns,
+    aws_sns_subscriptions as sns_subscriptions,
+    aws_lambda_event_sources as lambda_events,
     RemovalPolicy,
+    Fn,
     Stack
 )
 import boto3
 from botocore.exceptions import ClientError
 from constructs import Construct
+import os
+from dotenv import load_dotenv
 
 class ProductServiceStack(Stack):
     @staticmethod
@@ -25,6 +32,9 @@ class ProductServiceStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        load_dotenv()
+        EMAIL = os.getenv('EMAIL')
+        
         products_table_name = "products"
         stocks_table_name = "stocks"
 
@@ -32,6 +42,12 @@ class ProductServiceStack(Stack):
             "PRODUCTS_TABLE_NAME": products_table_name,
             "STOCKS_TABLE_NAME": stocks_table_name
         }  
+
+        catalog_items_queue_arn = Fn.import_value("CatalogItemsQueueArn")
+        catalog_items_queue = sqs.Queue.from_queue_arn(self, 'CatalogItemsQueue', catalog_items_queue_arn)
+
+        create_product_sns_topic = sns.Topic(self, "CreateProductTopic")
+        create_product_sns_topic.add_subscription(sns_subscriptions.EmailSubscription(EMAIL))
 
         if ProductServiceStack.table_exists(products_table_name):
             products_table = dynamodb.Table.from_table_name(self, "ProductsTable", products_table_name)
@@ -102,6 +118,19 @@ class ProductServiceStack(Stack):
             layers=[create_product_layer]
         )
 
+        catalog_batch_process_function = _lambda.Function(
+            self, 
+            'CatalogBatchProcessHandler',
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            code=_lambda.Code.from_asset('lambda_functions'),
+            handler='catalog_batch_process.handler',
+            environment={
+                **lambdas_env,
+                "CREATE_PRODUCT_SNS": create_product_sns_topic.topic_arn
+            },
+            layers=[create_product_layer]
+        )
+
         products_resource = api.root.add_resource("products")
         products_resource.add_method("GET", apigw.LambdaIntegration(get_products_list_function))
         products_resource.add_method('POST', apigw.LambdaIntegration(create_product_function))
@@ -115,3 +144,9 @@ class ProductServiceStack(Stack):
         stocks_table.grant_read_write_data(get_product_by_id_function)
         stocks_table.grant_read_write_data(get_products_list_function)
         stocks_table.grant_read_write_data(create_product_function)
+        products_table.grant_read_write_data(catalog_batch_process_function)
+        stocks_table.grant_read_write_data(catalog_batch_process_function)
+
+        catalog_items_queue.grant_consume_messages(catalog_batch_process_function)
+        create_product_sns_topic.grant_publish(catalog_batch_process_function)
+        catalog_batch_process_function.add_event_source(lambda_events.SqsEventSource(catalog_items_queue, batch_size=5))
