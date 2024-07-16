@@ -52,7 +52,13 @@ class ImportServiceStack(Stack):
 
         queue = sqs.Queue(self, "CatalogItemsQueue") 
 
-        api = apigw.RestApi(self, "ImportServiceApi", rest_api_name="import service")
+        api = apigw.RestApi(self, "ImportServiceApi", rest_api_name="import service",
+            default_cors_preflight_options={
+                "allow_origins": apigw.Cors.ALL_ORIGINS,
+                "allow_methods": ["GET", "POST", "PUT", "DELETE"],
+                "allow_headers": apigw.Cors.DEFAULT_HEADERS,
+                }
+        )
 
         basic_authorizer_function = _lambda.Function.from_function_name(self, "BasicAuthorizerFunction", "BasicAuthorizerFunction")
 
@@ -87,8 +93,8 @@ class ImportServiceStack(Stack):
         )
 
         products_resource = api.root.add_resource("import")
-        products_resource.add_method("GET", apigw.LambdaIntegration(
-            import_products_file_function), 
+        products_resource.add_method("GET", 
+            apigw.LambdaIntegration(import_products_file_function), 
             authorization_type=apigw.AuthorizationType.CUSTOM, 
             authorizer=basic_authorizer
         )
