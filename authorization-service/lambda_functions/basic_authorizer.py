@@ -17,7 +17,7 @@ def handler(event, context):
     
     try:
         credentials = base64.b64decode(auth_header.split(' ')[1]).decode('utf-8')
-        username, password = credentials.split("=")
+        username, password = credentials.split(":")
         stored_password = os.getenv(username)
 
         if stored_password and password == stored_password:
