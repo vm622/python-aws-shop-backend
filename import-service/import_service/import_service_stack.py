@@ -52,7 +52,22 @@ class ImportServiceStack(Stack):
 
         queue = sqs.Queue(self, "CatalogItemsQueue") 
 
-        api = apigw.RestApi(self, "ImportServiceApi", rest_api_name="import service")
+        api = apigw.RestApi(self, "ImportServiceApi", rest_api_name="import service",
+            default_cors_preflight_options={
+                "allow_origins": apigw.Cors.ALL_ORIGINS,
+                "allow_methods": ["GET", "POST", "PUT", "DELETE"],
+                "allow_headers": apigw.Cors.DEFAULT_HEADERS,
+                }
+        )
+
+        basic_authorizer_function = _lambda.Function.from_function_name(self, "BasicAuthorizerFunction", "BasicAuthorizerFunction")
+
+        basic_authorizer = apigw.TokenAuthorizer(
+            self, 
+            'BasicAuthorizer',
+            handler=basic_authorizer_function,
+            identity_source='method.request.header.Authorization'
+        )
 
         import_products_file_function = _lambda.Function(
             self,
@@ -78,7 +93,11 @@ class ImportServiceStack(Stack):
         )
 
         products_resource = api.root.add_resource("import")
-        products_resource.add_method("GET", apigw.LambdaIntegration(import_products_file_function))
+        products_resource.add_method("GET", 
+            apigw.LambdaIntegration(import_products_file_function), 
+            authorization_type=apigw.AuthorizationType.CUSTOM, 
+            authorizer=basic_authorizer
+        )
 
         bucket.grant_put(import_products_file_function)
         bucket.grant_read_write(import_products_file_function)
@@ -93,5 +112,27 @@ class ImportServiceStack(Stack):
         )
 
         queue.grant_send_messages(import_file_parser_function)
+
+        api.add_gateway_response(
+            "UnauthorizedResponse",
+            type=apigw.ResponseType.UNAUTHORIZED,
+            response_headers={
+                "Access-Control-Allow-Origin": "'*'",
+                "Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE'",
+            },
+            status_code="401"
+        )
+
+        api.add_gateway_response(
+            "DeniedResponse",
+            type=apigw.ResponseType.ACCESS_DENIED,
+            response_headers={
+                "Access-Control-Allow-Origin": "'*'",
+                "Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE'",
+            },
+            status_code="403"
+        )
 
         CfnOutput(self, "CatalogItemsQueueArn", value=queue.queue_arn, export_name="CatalogItemsQueueArn")
